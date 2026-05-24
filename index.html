@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Borrowed Phone UI</title>
+  <style>
+    :root {
+      --phone-w: 390px;
+      --phone-h: 780px;
+      --bg: #101318;
+      --panel: rgba(255,255,255,.12);
+      --panel-strong: rgba(255,255,255,.18);
+      --text: #f6f7fb;
+      --muted: rgba(246,247,251,.68);
+      --accent: #5aa7ff;
+      --danger: #ff6a6a;
+      --ok: #67e08f;
+      --yellow: #ffd35e;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 30% 20%, #38445d, #11151e 50%, #08090d);
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .phone {
+      overflow: visible;
+      width: var(--phone-w);
+      height: var(--phone-h);
+      border-radius: 42px;
+      background: #050607;
+      padding: 14px;
+      box-shadow: 0 35px 90px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.07);
+      position: relative;
+    }
+
+    .screen {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: 32px;
+      position: relative;
+      background:
+        linear-gradient(145deg, rgba(35,64,112,.9), rgba(20,24,35,.9) 45%, rgba(55,28,72,.9)),
+        radial-gradient(circle at 70% 20%, rgba(255,255,255,.18), transparent 35%);
+    }
+
+    .status-bar {
+      height: 42px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 6px 16px 0;
+      font-size: 12px;
+      letter-spacing: .5px;
+      position: relative;
+      z-index: 20;
+    }
+
+    .carrier { font-weight: 700; }
+    .center-lock { font-size: 15px; opacity: .9; }
+    .status-icons {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 7px;
+      color: rgba(255,255,255,.6);
+    }
+    .status-icons .on { color: #fff; filter: drop-shadow(0 0 5px rgba(90,167,255,.8)); }
+    .battery {
+      width: 24px;
+      height: 12px;
+      border: 1.6px solid currentColor;
+      border-radius: 3px;
+      position: relative;
+      overflow: visible;
+    }
+    .battery::after {
+      content: "";
+      position: absolute;
+      right: -4px;
+      top: 3px;
+      width: 3px;
+      height: 5px;
+      background: currentColor;
+      border-radius: 0 2px 2px 0;
+    }
+    .battery-fill {
+      height: 100%;
+      width: 100%;
+      background: currentColor;
+      transform-origin: left center;
+    }
+
+    .home {
+      position: absolute;
+      inset: 42px 0 0;
+      padding: 22px 18px 100px;
+      z-index: 5;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px 14px;
+      align-content: start;
+    }
+
+    .app-icon {
+      min-width: 0;
+      text-align: center;
+      cursor: grab;
+      touch-action: none;
+    }
+    .app-icon:active { cursor: grabbing; }
+    .icon-art {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 7px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      font-size: 28px;
+      background: linear-gradient(145deg, rgba(255,255,255,.22), rgba(255,255,255,.08));
+      box-shadow: inset 0 1px 1px rgba(255,255,255,.3), 0 10px 20px rgba(0,0,0,.18);
+    }
+    .app-name {
+      display: block;
+      font-size: 11px;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-shadow: 0 1px 3px rgba(0,0,0,.7);
+    }
+
+    .dock {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      height: 78px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      padding: 10px 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.14);
+      backdrop-filter: blur(18px);
+      z-index: 10;
+    }
+    .dock .app-icon { cursor: pointer; }
+    .dock .icon-art { width: 48px; height: 48px; border-radius: 14px; font-size: 23px; margin-bottom: 0; }
+
+    .lock-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-rows: 170px 1fr 120px;
+      background:
+        linear-gradient(145deg, rgba(22,27,40,.98), rgba(49,39,73,.98)),
+        radial-gradient(circle at 50% 20%, rgba(255,255,255,.14), transparent 30%);
+      transition: opacity .3s ease, transform .3s ease;
+    }
+    .lock-screen.unlocked {
+      opacity: 0;
+      transform: translateY(-20px);
+      pointer-events: none;
+    }
+    .lock-title { text-align: center; padding-top: 64px; }
+    .clock { font-size: 52px; font-weight: 300; letter-spacing: -2px; }
+    .hint { margin-top: 8px; color: var(--muted); font-size: 13px; }
+
+    .pattern-area {
+      position: relative;
+      width: 270px;
+      height: 270px;
+      margin: 0 auto;
+      align-self: center;
+    }
+    .pattern-line {
+      position: absolute;
+      height: 8px;
+      background: rgba(90,167,255,.85);
+      border-radius: 999px;
+      transform-origin: left center;
+      opacity: 0;
+      box-shadow: 0 0 12px rgba(90,167,255,.8);
+      pointer-events: none;
+    }
+    .pattern-line.show { opacity: 1; }
+    .dot {
+      position: absolute;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.45);
+      background: rgba(255,255,255,.08);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      color: rgba(255,255,255,.45);
+    }
+    .dot.active {
+      border-color: var(--accent);
+      background: rgba(90,167,255,.25);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(90,167,255,.65);
+    }
+
+    .lock-footer { text-align: center; color: var(--muted); font-size: 13px; }
+
+    .app-window {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      background: #f4f5f8;
+      color: #111;
+      transform: translateY(105%);
+      transition: transform .28s ease, visibility 0s linear .28s;
+      display: grid;
+      grid-template-rows: 42px 1fr;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .app-window.open {
+      transform: translateY(0);
+      visibility: visible;
+      pointer-events: auto;
+      transition: transform .28s ease, visibility 0s;
+    }
+    .window-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px 0;
+      background: #fff;
+      border-bottom: 1px solid #e6e6e6;
+    }
+    .back-btn {
+      border: 0;
+      background: transparent;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .window-title { font-size: 16px; font-weight: 800; }
+    .window-body { overflow: auto; padding: 14px; }
+
+    .store-hero {
+      padding: 16px;
+      border-radius: 18px;
+      color: white;
+      background: linear-gradient(135deg, #246bfe, #7f4dff);
+      margin-bottom: 14px;
+    }
+    .store-hero h2 { margin: 0 0 5px; font-size: 24px; }
+    .store-hero p { margin: 0; opacity: .85; font-size: 13px; }
+
+    .app-card {
+      display: grid;
+      grid-template-columns: 58px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e3e4e8;
+    }
+    .store-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      color: white;
+      background: linear-gradient(145deg, #2a8cff, #28d0ff);
+    }
+    .app-meta h3 { margin: 0 0 4px; font-size: 15px; }
+    .app-meta p { margin: 0 0 4px; font-size: 11px; color: #666; }
+    .stats { font-size: 10px; color: #777; display: flex; gap: 7px; flex-wrap: wrap; }
+    .download-btn {
+      border: 0;
+      border-radius: 999px;
+      background: #1267ff;
+      color: white;
+      padding: 7px 13px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(18,103,255,.28);
+    }
+    .download-btn.installed { background: #111827; color: white; }
+    .download-btn:disabled { color: #999; background: #eee; cursor: default; box-shadow:none; }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 110px;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(0,0,0,.78);
+      color: white;
+      padding: 11px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: .22s ease;
+      z-index: 80;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .debug-panel {
+      position: absolute;
+      right: 12px;
+      top: 52px;
+      z-index: 90;
+      display: flex;
+      gap: 5px;
+      opacity: .55;
+    }
+    .debug-panel button {
+      border: 0;
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-size: 10px;
+      cursor: pointer;
+      background: rgba(255,255,255,.18);
+      color: white;
+      backdrop-filter: blur(10px);
+    }
+
+    .simple-page h2 { margin-top: 0; }
+    .simple-card {
+      background: white;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+    }
+    .shop-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .shop-item:last-child { border-bottom: 0; }
+    .stock { font-size: 11px; color: #777; }
+    .buy-btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #111827;
+      color: white;
+      cursor: pointer;
+    }
+    .buy-btn:disabled { background: #ccc; cursor: default; }
+
+
+    .amazon-page { background:#eaeded; margin:-14px; min-height:calc(100% + 28px); color:#111; position:relative; padding-bottom:70px; }
+    .amazon-header { background:#131921; color:white; padding:12px 14px; }
+    .amazon-logo { font-size:23px; font-weight:900; letter-spacing:-.5px; }
+    .amazon-logo span { color:#ff9900; }
+    .amazon-search { margin-top:10px; background:white; border-radius:9px; display:flex; overflow:hidden; border:2px solid #febd69; }
+    .amazon-search input { flex:1; border:0; padding:10px; font-size:13px; outline:0; }
+    .amazon-search button { border:0; background:#febd69; padding:0 12px; font-weight:900; cursor:pointer; }
+    .amazon-sub { background:#232f3e; color:white; padding:8px 14px; font-size:12px; }
+    .amazon-account { background:white; margin:10px; padding:12px; border-radius:10px; font-size:13px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .amazon-account-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .amazon-small-btn { border:0; border-radius:999px; background:#ffd814; padding:7px 10px; font-weight:800; cursor:pointer; font-size:12px; }
+    .amazon-small-btn.dark { background:#232f3e; color:white; }
+    .amazon-tabs { display:flex; gap:6px; overflow:auto; padding:0 10px 10px; }
+    .amazon-tab { border:0; border-radius:999px; background:white; color:#111; padding:8px 11px; font-size:12px; font-weight:800; cursor:pointer; white-space:nowrap; }
+    .amazon-tab.active { background:#232f3e; color:white; }
+    .amazon-list { padding:0 10px 14px; }
+    .amazon-item { background:white; border-radius:10px; padding:12px; margin-bottom:10px; display:grid; grid-template-columns:72px 1fr; gap:12px; box-shadow:0 2px 4px rgba(0,0,0,.08); cursor:pointer; }
+    .amazon-thumb { width:72px; height:72px; border-radius:8px; background:linear-gradient(145deg,#f7f7f7,#d7dde3); display:grid; place-items:center; font-size:31px; }
+    .amazon-item h3 { margin:0 0 4px; font-size:14px; line-height:1.25; }
+    .amazon-item .stars { color:#f6a400; font-size:12px; margin-bottom:4px; }
+    .amazon-price { font-weight:900; font-size:16px; margin:4px 0; }
+    .amazon-original { color:#777; text-decoration:line-through; font-size:12px; margin-left:5px; font-weight:500; }
+    .amazon-discount { display:inline-block; background:#cc0c39; color:white; border-radius:4px; padding:2px 5px; font-size:10px; margin-left:5px; font-weight:900; }
+    .amazon-meta { color:#555; font-size:11px; margin-bottom:5px; }
+    .amazon-detail { grid-column:1 / -1; border-top:1px solid #eee; padding-top:10px; margin-top:6px; color:#333; font-size:12px; line-height:1.45; }
+    .amazon-cart-btn { border:0; border-radius:999px; background:#ffd814; padding:8px 13px; font-weight:800; cursor:pointer; margin-top:8px; }
+    .amazon-cart-btn:disabled { background:#bbb; color:#666; cursor:default; }
+    .amazon-floating-cart { position:absolute; right:16px; bottom:16px; width:56px; height:56px; border:0; border-radius:50%; background:#131921; color:white; font-size:25px; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,.25); }
+    .amazon-cart-badge { position:absolute; top:-5px; right:-5px; background:#ff9900; color:#111; min-width:22px; height:22px; border-radius:999px; display:grid; place-items:center; font-size:12px; font-weight:900; }
+    .amazon-cart-panel, .amazon-login-panel, .amazon-signup-panel { background:white; margin:10px; border-radius:12px; padding:14px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+    .amazon-cart-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; border-bottom:1px solid #eee; padding:10px 0; }
+    .qty-controls { display:flex; align-items:center; gap:6px; }
+    .qty-controls button { width:25px; height:25px; border-radius:50%; border:1px solid #999; background:white; font-weight:900; cursor:pointer; }
+    .amazon-checkout { width:100%; border:0; border-radius:999px; background:#ffa41c; padding:10px; font-weight:900; margin-top:12px; cursor:pointer; }
+    .amazon-form input { width:100%; border:1px solid #bbb; border-radius:8px; padding:10px; margin:6px 0; }
+    .amazon-warning { color:#cc0c39; font-size:12px; margin-top:8px; }
+
+    .rfid-terminal { background:#020403; color:#63ff8e; min-height:calc(100% + 28px); margin:-14px; padding:18px; font-family:Consolas, 'Courier New', monospace; text-shadow:0 0 8px rgba(99,255,142,.45); }
+    .rfid-terminal h2 { margin:0 0 12px; color:#9affb8; font-size:18px; }
+    .rfid-log { border:1px solid rgba(99,255,142,.35); background:rgba(99,255,142,.05); padding:12px; min-height:170px; font-size:12px; line-height:1.6; margin-bottom:14px; }
+    .rfid-input-row { display:flex; gap:8px; }
+    .rfid-input-row input { flex:1; background:#000; color:#63ff8e; border:1px solid #63ff8e; padding:11px; font-family:inherit; outline:0; }
+    .rfid-input-row button { background:#63ff8e; color:#001b08; border:0; padding:0 14px; font-weight:900; cursor:pointer; }
+    .rfid-note { color:rgba(99,255,142,.7); font-size:11px; margin-top:12px; }
+
+  
+
+    /* v5 visual polish */
+    .screen::before {
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 22% 14%, rgba(255,255,255,.18), transparent 20%),
+        radial-gradient(circle at 85% 78%, rgba(90,167,255,.16), transparent 26%),
+        linear-gradient(120deg, rgba(255,255,255,.04), transparent 35%, rgba(255,255,255,.03));
+      pointer-events:none;
+      z-index:1;
+    }
+    .screen.battery-low::after {
+      content:"LOW BATTERY";
+      position:absolute;
+      left:18px;
+      right:18px;
+      bottom:112px;
+      padding:9px 12px;
+      border-radius:14px;
+      background:rgba(145,19,28,.82);
+      color:white;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.9px;
+      text-align:center;
+      z-index:18;
+      box-shadow:0 10px 22px rgba(0,0,0,.35);
+      pointer-events:none;
+    }
+    .home-widget {
+      margin-bottom:18px;
+      border-radius:24px;
+      padding:14px;
+      background:rgba(255,255,255,.16);
+      box-shadow:inset 0 1px 1px rgba(255,255,255,.24), 0 12px 30px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+    }
+    .home-widget-title { font-size:12px; color:rgba(255,255,255,.72); margin-bottom:8px; display:flex; justify-content:space-between; }
+    .notification-card {
+      display:grid;
+      grid-template-columns:34px 1fr;
+      gap:10px;
+      align-items:center;
+      padding:9px;
+      border-radius:16px;
+      background:rgba(0,0,0,.18);
+      margin-top:7px;
+      font-size:12px;
+    }
+    .notification-card b { display:block; font-size:12px; margin-bottom:2px; }
+    .notification-card small { color:rgba(255,255,255,.68); }
+    .mini-symbol {
+      width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
+      background:rgba(255,255,255,.14);
+    }
+    .app-icon { transition: transform .16s ease, filter .16s ease; }
+    .app-icon:hover { transform: translateY(-3px); filter: drop-shadow(0 12px 14px rgba(0,0,0,.24)); }
+    .icon-art, .store-icon { overflow:hidden; position:relative; }
+    .icon-art::after, .store-icon::after {
+      content:""; position:absolute; inset:1px; border-radius:inherit;
+      background:linear-gradient(145deg, rgba(255,255,255,.35), transparent 46%);
+      pointer-events:none;
+    }
+    .icon-svg { width:72%; height:72%; display:block; filter:drop-shadow(0 2px 2px rgba(0,0,0,.24)); }
+    .dock .icon-svg { width:68%; height:68%; }
+    .store-icon .icon-svg { width:70%; height:70%; }
+    .app-window { border-radius:32px; overflow:hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .window-top { min-height:48px; padding-top:8px; }
+    .window-title { letter-spacing:-.2px; }
+    .store-hero { box-shadow:0 12px 28px rgba(36,107,254,.24); }
+    .app-card { border-radius:16px; padding:12px; margin-bottom:8px; background:#fff; border-bottom:0; box-shadow:0 5px 15px rgba(0,0,0,.06); }
+    .download-btn { background:#0a66ff; color:white; box-shadow:0 4px 12px rgba(10,102,255,.28); }
+    .download-btn.installed { background:#eef2f7; color:#0a66ff; box-shadow:none; }
+
+    .amazon-logo-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .amazon-prime-pill { background:#37475a; color:#fff; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:4px 8px; font-size:11px; font-weight:900; }
+    .amazon-page { font-family: Arial, Helvetica, sans-serif; }
+    .amazon-header { box-shadow:0 6px 16px rgba(0,0,0,.18); position:sticky; top:0; z-index:3; }
+    .amazon-logo { display:flex; align-items:baseline; gap:2px; }
+    .amazon-logo::after { content:"⌣"; color:#ff9900; font-size:22px; transform:translate(-58px, 13px) rotate(-6deg); height:0; }
+    .amazon-sub { display:flex; align-items:center; gap:6px; }
+    .amazon-sub::before { content:"📍"; }
+    .amazon-item { grid-template-columns:86px 1fr; border:1px solid #e2e2e2; transition:.15s ease; }
+    .amazon-item:hover { transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.12); }
+    .amazon-thumb { width:86px; height:86px; font-size:0; background:#f7f8fa; border:1px solid #e1e4e8; }
+    .item-svg { width:76px; height:76px; }
+    .amazon-meta .prime { color:#007185; font-weight:900; }
+    .amazon-floating-cart { display:grid; place-items:center; background:linear-gradient(145deg,#131921,#2b3c52); border:2px solid #ff9900; }
+    .amazon-cart-panel h3, .amazon-login-panel h3, .amazon-signup-panel h3 { margin-top:0; }
+    .rfid-terminal { background:radial-gradient(circle at 20% 0%, #102d1d, #030604 38%); min-height:calc(100% + 28px); margin:-14px; padding:22px; color:#73ff9a; font-family:Consolas, 'Courier New', monospace; text-shadow:0 0 8px rgba(115,255,154,.35); }
+    .rfid-terminal h2 { border-bottom:1px solid rgba(115,255,154,.38); padding-bottom:10px; letter-spacing:1.5px; }
+    .rfid-log { background:rgba(0,0,0,.42); border:1px solid rgba(115,255,154,.3); border-radius:10px; padding:14px; min-height:170px; box-shadow:inset 0 0 18px rgba(115,255,154,.08); }
+    .rfid-input-row input { background:#020402; color:#73ff9a; border:1px solid #45b36a; }
+    .rfid-input-row button { background:#73ff9a; color:#021008; font-weight:900; }
+
+    .at-status-btn {
+      border: 1px solid rgba(255,255,255,.28);
+      background: linear-gradient(145deg, rgba(160,210,255,.32), rgba(85,120,255,.18));
+      color: white;
+      border-radius: 7px;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 5px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: inset 0 1px rgba(255,255,255,.25), 0 0 8px rgba(90,167,255,.25);
+    }
+    .at-status-btn:hover { filter: brightness(1.2); }
+
+    .ability-page {
+      min-height: calc(100% + 28px);
+      margin: -14px;
+      padding: 18px;
+      color: white;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(255,255,255,.22), transparent 22%),
+        radial-gradient(circle at 85% 25%, rgba(255,110,220,.22), transparent 28%),
+        linear-gradient(160deg, #111827, #22143f 58%, #0b1020);
+      overflow: hidden;
+      position: relative;
+    }
+    .ability-page::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background:
+        linear-gradient(115deg, transparent 0 40%, rgba(255,255,255,.07) 45%, transparent 50% 100%);
+      animation: abilityShine 4.2s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes abilityShine {
+      from { transform: translateX(-30%) rotate(0deg); }
+      to { transform: translateX(30%) rotate(0deg); }
+    }
+    .ability-loading {
+      min-height: 620px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .ability-spinner {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      border: 6px solid rgba(255,255,255,.16);
+      border-top-color: #8bd3ff;
+      margin: 0 auto 18px;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ability-wink {
+      font-size: 68px;
+      animation: winkPop .9s ease both;
+      filter: drop-shadow(0 0 18px rgba(255,255,255,.55));
+    }
+    @keyframes winkPop {
+      0% { transform: scale(.4) rotate(-10deg); opacity: 0; }
+      55% { transform: scale(1.25) rotate(5deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    .ability-wink-flash {
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.55), transparent 60%);
+      animation: flashOut .9s ease both;
+    }
+    @keyframes flashOut {
+      from { transform: scale(.2); opacity: 1; }
+      to { transform: scale(2.2); opacity: 0; }
+    }
+
+    .ability-header {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .choose-one {
+      font-size: 30px;
+      font-weight: 1000;
+      letter-spacing: .6px;
+      margin: 0;
+      text-shadow: 0 4px 18px rgba(0,0,0,.45);
+      animation: hurryText .55s ease-in-out infinite alternate;
+    }
+    @keyframes hurryText {
+      from { transform: translateX(-2px) rotate(-.7deg) scale(1); }
+      to { transform: translateX(2px) rotate(.7deg) scale(1.035); }
+    }
+    .ability-sub {
+      font-size: 12px;
+      opacity: .78;
+      margin-top: 4px;
+    }
+    .ability-control-row {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0 14px;
+    }
+    .ability-refresh-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 900;
+      cursor: pointer;
+      color: #121826;
+      background: linear-gradient(145deg, #ffffff, #bde8ff);
+      box-shadow: 0 8px 20px rgba(0,0,0,.25);
+    }
+    .ability-refresh-btn:disabled {
+      opacity: .45;
+      cursor: default;
+      filter: grayscale(1);
+    }
+    .ability-cards {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .ability-card {
+      min-height: 138px;
+      border-radius: 22px;
+      padding: 13px;
+      display: grid;
+      grid-template-columns: 38px 1fr 58px;
+      gap: 10px;
+      align-items: center;
+      color: #111827;
+      box-shadow: 0 16px 38px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.58);
+      position: relative;
+      overflow: hidden;
+    }
+    .ability-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .55;
+      background: radial-gradient(circle at 20% 0%, rgba(255,255,255,.85), transparent 35%);
+      pointer-events: none;
+    }
+    .ability-card.silver {
+      border: 3px solid #d7dde8;
+      background: linear-gradient(145deg, #f8fbff, #b6bfcc 58%, #eef2f8);
+    }
+    .ability-card.gold {
+      border: 3px solid #ffd76d;
+      background: linear-gradient(145deg, #fff8d7, #ffc745 55%, #fff0a4);
+    }
+    .ability-card.rainbow {
+      border: 3px solid transparent;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.9), rgba(255,255,255,.72)) padding-box,
+        conic-gradient(from 20deg, #ff5a9e, #ffd35e, #70f08a, #5bdcff, #9d6bff, #ff5a9e) border-box;
+      animation: rainbowCard 1.8s linear infinite;
+    }
+    @keyframes rainbowCard {
+      from { filter: hue-rotate(0deg) saturate(1.15); }
+      to { filter: hue-rotate(360deg) saturate(1.15); }
+    }
+    .ability-card.locked {
+      outline: 3px solid rgba(90,167,255,.95);
+      box-shadow: 0 0 24px rgba(90,167,255,.65), 0 16px 38px rgba(0,0,0,.34);
+    }
+    .ability-lock-btn, .ability-select-btn {
+      position: relative;
+      z-index: 2;
+      border: 0;
+      border-radius: 14px;
+      min-height: 54px;
+      font-weight: 1000;
+      cursor: pointer;
+      box-shadow: inset 0 1px rgba(255,255,255,.35), 0 7px 16px rgba(0,0,0,.18);
+    }
+    .ability-lock-btn {
+      background: rgba(17,24,39,.88);
+      color: white;
+      font-size: 18px;
+    }
+    .ability-lock-btn.locked {
+      background: linear-gradient(145deg, #1267ff, #54c7ff);
+    }
+    .ability-select-btn {
+      background: linear-gradient(145deg, #111827, #39455c);
+      color: white;
+      font-size: 11px;
+      padding: 0 8px;
+    }
+    .ability-main {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+    .ability-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 17px;
+      display: grid;
+      place-items: center;
+      font-size: 29px;
+      background: rgba(255,255,255,.55);
+      box-shadow: inset 0 1px rgba(255,255,255,.8), 0 8px 18px rgba(0,0,0,.12);
+    }
+    .ability-title {
+      font-weight: 1000;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    .ability-desc {
+      font-size: 11px;
+      line-height: 1.35;
+      color: rgba(17,24,39,.75);
+    }
+    .ability-rarity {
+      display: inline-block;
+      margin-top: 5px;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .6px;
+      opacity: .72;
+    }
+
+    .receipt-layer {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      top: -390px;
+      height: 1180px;
+      pointer-events: none;
+      z-index: 140;
+      overflow: visible;
+    }
+    
+    .ability-receipt {
+      position: absolute;
+      left: 50%;
+      top: 0px;
+      width: 260px;
+      min-height: 330px;
+      transform: translateX(-50%) translateY(-140%);
+      color: #1f2937;
+      background:
+        linear-gradient(#fffdf4, #f8f0d7),
+        repeating-linear-gradient(90deg, transparent 0 9px, rgba(0,0,0,.035) 10px);
+      border-radius: 8px 8px 14px 14px;
+      padding: 17px 14px 14px;
+      box-shadow: 0 20px 45px rgba(0,0,0,.42);
+      font-family: "Courier New", monospace;
+      cursor: grab;
+      pointer-events: auto;
+      touch-action: none;
+      z-index: 50;
+      animation: receiptPrint 2.25s cubic-bezier(.18,.82,.16,1) forwards;
+    }
+    .ability-receipt:active { cursor: grabbing; }
+    .ability-receipt::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -9px;
+      height: 11px;
+      background:
+        linear-gradient(135deg, transparent 0 8px, #fffdf4 8px 16px, transparent 16px),
+        linear-gradient(225deg, transparent 0 8px, #fffdf4 8px 16px, transparent 16px);
+      background-size: 16px 11px;
+      background-position: 0 0, 8px 0;
+    }
+    @keyframes receiptPrint {
+      0% { transform: translateX(-50%) translateY(-140%); opacity: 1; }
+      18% { transform: translateX(-50%) translateY(-112%); opacity: 1; }
+      42% { transform: translateX(-50%) translateY(-74%); opacity: 1; }
+      68% { transform: translateX(-50%) translateY(-34%); opacity: 1; }
+      100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+    .receipt-title {
+      text-align: center;
+      font-weight: 900;
+      font-size: 15px;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed rgba(31,41,55,.35);
+      padding-bottom: 8px;
+    }
+    .receipt-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11px;
+      line-height: 1.5;
+      border-bottom: 1px dotted rgba(31,41,55,.18);
+      padding: 3px 0;
+    }
+    .receipt-result {
+      margin-top: 9px;
+      padding: 8px;
+      border: 1px dashed rgba(31,41,55,.35);
+      border-radius: 7px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 900;
+      background: rgba(255,255,255,.45);
+    }
+    .receipt-small {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 9px;
+      color: rgba(31,41,55,.62);
+    }
+    .receipt-ability-box {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      background: linear-gradient(145deg, rgba(255,215,109,.5), rgba(255,255,255,.38));
+      border: 1px solid rgba(31,41,55,.25);
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 9px;
+      align-items: center;
+    }
+    .receipt-ability-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(31,41,55,.12);
+      font-size: 28px;
+    }
+    .receipt-power {
+      margin-top: 12px;
+      text-align: center;
+      font-weight: 1000;
+      font-size: 16px;
+      letter-spacing: .5px;
+    }
+    .receipt-wise {
+      text-align: center;
+      font-size: 11px;
+      margin-top: 3px;
+    }
+    .receipt-barcode {
+      height: 56px;
+      margin: 12px auto 8px;
+      width: 190px;
+      background:
+        repeating-linear-gradient(90deg,
+          #111 0 2px,
+          transparent 2px 4px,
+          #111 4px 5px,
+          transparent 5px 8px,
+          #111 8px 11px,
+          transparent 11px 13px,
+          #111 13px 14px,
+          transparent 14px 17px);
+      border-radius: 2px;
+    }
+
+    .receipt-close {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      border: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(31,41,55,.12);
+      cursor: pointer;
+      font-weight: 900;
+    }
+    .bleh-effect {
+      position: absolute;
+      left: 50%;
+      top: 125px;
+      transform: translateX(-50%);
+      font-size: 58px;
+      filter: drop-shadow(0 8px 16px rgba(0,0,0,.38));
+      pointer-events: none;
+      z-index: 180;
+      animation: blehPop 2.85s ease forwards;
+    }
+    .bleh-text {
+      position: absolute;
+      left: 50%;
+      top: 218px;
+      transform: translateX(-50%);
+      font-weight: 1000;
+      font-size: 22px;
+      color: #ff88c8;
+      text-shadow: 0 3px 0 #111827, 0 0 10px rgba(255,136,200,.75);
+      pointer-events: none;
+      z-index: 181;
+      animation: blehTextPop 2.85s ease forwards;
+    }
+    @keyframes blehPop {
+      0% { transform: translateX(-50%) scale(.25) rotate(-18deg); opacity: 0; }
+      10% { transform: translateX(-50%) scale(1.18) rotate(8deg); opacity: 1; }
+      24% { transform: translateX(-50%) scale(.96) rotate(-4deg); opacity: 1; }
+      45% { transform: translateX(-50%) translateY(-8px) scale(1.06) rotate(5deg); opacity: 1; }
+      68% { transform: translateX(-50%) translateY(-4px) scale(.98) rotate(-3deg); opacity: 1; }
+      88% { transform: translateX(-50%) translateY(-18px) scale(.94) rotate(0deg); opacity: .95; }
+      100% { transform: translateX(-50%) translateY(-26px) scale(.82) rotate(0deg); opacity: 0; }
+    }
+    @keyframes blehTextPop {
+      0% { transform: translateX(-50%) translateY(12px) scale(.45); opacity: 0; }
+      12% { transform: translateX(-50%) translateY(0) scale(1.12); opacity: 1; }
+      38% { transform: translateX(-50%) translateY(-4px) scale(1); opacity: 1; }
+      70% { transform: translateX(-50%) translateY(-10px) scale(1.05); opacity: 1; }
+      100% { transform: translateX(-50%) translateY(-38px) scale(.86); opacity: 0; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="screen">
+      <div class="status-bar">
+        <div class="carrier">MTN AF LTE</div>
+        <div class="center-lock" id="lockIcon">🔒</div>
+        <div class="status-icons">
+          <span id="locationIcon" title="Location">⌖</span>
+          <span id="bluetoothIcon" title="Bluetooth">ᛒ</span>
+          <span id="wifiIcon" title="Wi-Fi">≋</span>
+          <button class="at-status-btn" id="abilityTunerBtn" title="Ability Tuner" onclick="openAbilityTuner()">AT</button>
+          <div class="battery" id="batteryIcon"><div class="battery-fill" id="batteryFill"></div></div>
+          <span id="batteryText">100</span>
+        </div>
+      </div>
+
+      <div class="debug-panel">
+        <button onclick="toggleWifi()">Wi-Fi</button>
+        <button onclick="toggleBluetooth()">BT</button>
+        <button onclick="drainBattery(10)">-10</button>
+      </div>
+
+      <main class="home">
+        <section class="home-widget">
+          <div class="home-widget-title"><span>Borrowed Phone</span><span id="homeTimeLabel">Today</span></div>
+          <div class="notification-card"><div class="mini-symbol">📦</div><div><b>Amazon package box</b><small>결제한 물건은 다음날 아침 확인</small></div></div>
+          <div class="notification-card"><div class="mini-symbol">☎</div><div><b>Friend's phone</b><small>전화, 메시지, 카메라는 오프라인 사용 가능</small></div></div>
+        </section>
+        <div class="app-grid" id="appGrid"></div>
+      </main>
+
+      <nav class="dock">
+        <div class="app-icon" onclick="callGameEvent('PHONE_CALL')">
+          <div class="icon-art" style="background:linear-gradient(145deg,#15c66f,#05a24f)"><svg class="icon-svg" viewBox="0 0 64 64"><path fill="white" d="M23 12c-3 2-5 5-5 9 0 16 13 29 29 29 4 0 7-2 9-5l-9-9c-2 2-4 3-7 2-6-2-11-7-13-13-1-3 0-5 2-7z"/></svg></div>
+        </div>
+        <div class="app-icon" onclick="callGameEvent('MESSAGE_OPEN')">
+          <div class="icon-art" style="background:linear-gradient(145deg,#57d46c,#1cae42)"><svg class="icon-svg" viewBox="0 0 64 64"><path fill="white" d="M12 16h40a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6H30L18 56V46h-6a6 6 0 0 1-6-6V22a6 6 0 0 1 6-6z"/></svg></div>
+        </div>
+        <div class="app-icon" onclick="callGameEvent('CAMERA_OPEN')">
+          <div class="icon-art" style="background:linear-gradient(145deg,#737b87,#20242a)"><svg class="icon-svg" viewBox="0 0 64 64"><path fill="white" d="M20 18l4-6h16l4 6h8a6 6 0 0 1 6 6v22a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V24a6 6 0 0 1 6-6h8zm12 28a12 12 0 1 0 0-24 12 12 0 0 0 0 24zm0-6a6 6 0 1 1 0-12 6 6 0 0 1 0 12z"/></svg></div>
+        </div>
+      </nav>
+
+      <section class="lock-screen" id="lockScreen">
+        <div class="lock-title">
+          <div class="clock" id="clockText">08:12</div>
+          <div class="hint">친구의 휴대폰 · 패턴을 그려 잠금 해제</div>
+        </div>
+        <div class="pattern-area" id="patternArea"></div>
+        <div class="lock-footer">맨 아래 줄을 왼쪽에서 오른쪽으로 그으세요</div>
+      </section>
+
+      <section class="app-window" id="appWindow">
+        <div class="window-top">
+          <button class="back-btn" onclick="closeWindow()">‹</button>
+          <div class="window-title" id="windowTitle">App</div>
+        </div>
+        <div class="window-body" id="windowBody"></div>
+      </section>
+
+      <div class="toast" id="toast">메시지</div>
+    </div>
+    <div class="receipt-layer" id="receiptLayer"></div>
+  </div>
+
+<script>
+  const GAME_STATE = {
+    wifi: true,
+    bluetooth: false,
+    location: true,
+    battery: 100,
+    installedApps: ["appstore"],
+    money: 1200,
+    gameHour: 9,
+    hunger: 100,
+    deliveries: [],
+    amazonLoggedIn: false,
+    amazonUserId: null,
+    amazonCart: [],
+    amazonCategory: "food",
+    amazonExpanded: null,
+    amazonView: "shop",
+    amazonDeals: {},
+    activeApp: null,
+    abilityCards: [],
+    abilityLocked: [false, false, false],
+    abilityRefreshUsed: false,
+    abilityLoadingPhase: "idle"
+  };
+
+  const APP_LIBRARY = {
+    appstore: { name: "App Store", icon: "appstore", color: "linear-gradient(145deg,#159cff,#44d1ff)", system: true },
+    bookven: { name: "BookVen", icon: "book", color: "linear-gradient(145deg,#7c5cff,#31b7ff)", rating: "4.8", recommends: "추천 82", downloads: "1.2만", desc: "River Ridge 도서관 검색 앱" },
+    amazon: { name: "Amazon", icon: "amazon", color: "linear-gradient(145deg,#131921,#ff9900)", rating: "4.6", recommends: "추천 241", downloads: "8.7만", desc: "미국식 온라인 쇼핑 앱" },
+    rfid: { name: "RFID Input", icon: "rfid", color: "linear-gradient(145deg,#222,#666)", rating: "3.9", recommends: "추천 12", downloads: "540", desc: "RFID 카드 번호 입력 및 확인" },
+    campusmap: { name: "Campus Map", icon: "map", color: "linear-gradient(145deg,#28b487,#82e0aa)", rating: "4.2", recommends: "추천 65", downloads: "3.1천", desc: "학교 건물과 실습실 위치 찾기" },
+    doranet: { name: "DoraNet", icon: "dora", color: "linear-gradient(145deg,#812cff,#ff61cb)", rating: "4.9", recommends: "추천 ?", downloads: "???", desc: "수상할 정도로 빠른 메신저" }
+  };
+
+  const STORE_APPS = ["bookven", "amazon", "rfid", "campusmap", "doranet"];
+
+  const SHOP_ITEMS = [
+    { variable: 100, category: "food", icon: "🍎", name: "Apple Snack Pack", price: 300, stock: 3, desc: "실습 중 허기를 달래기 좋은 작은 사과 간식 묶음입니다." },
+    { variable: 101, category: "electronics", icon: "🔋", name: "Portable Battery", price: 500, stock: 1, desc: "빌린 휴대폰 배터리가 걱정될 때 쓰는 보조 배터리입니다." },
+    { variable: 102, category: "lab", icon: "🧤", name: "Lab Gloves", price: 150, stock: 0, desc: "과학실, 실습실, 수상한 물건 조사에 사용할 수 있는 장갑입니다." },
+    { variable: 103, category: "medical", icon: "🩹", name: "Emergency Bandage", price: 250, stock: 2, desc: "가벼운 상처 처치용 붕대입니다. 가방에 있으면 안심됩니다." },
+    { variable: 104, category: "food", icon: "🥪", name: "Peanut Butter Sandwich", price: 220, stock: 4, desc: "빠르게 먹을 수 있는 샌드위치. 배고픔 수치 회복용으로 적합합니다." },
+    { variable: 105, category: "electronics", icon: "🎧", name: "Cheap Earbuds", price: 180, stock: 5, desc: "통화 이벤트나 녹음 이벤트에 연결하기 좋은 저가 이어버드입니다." }
+  ];
+
+  const AMAZON_CATEGORIES = [
+    { id: "food", label: "음식" },
+    { id: "electronics", label: "전자기기" },
+    { id: "lab", label: "실습용품" },
+    { id: "medical", label: "응급용품" }
+  ];
+
+  const AMAZON_ACCOUNTS = {
+    "123": { password: "123", name: "123", discounts: { 101: 20, 104: 10 } },
+    "marion": { password: "123", name: "Marion", discounts: { 100: 10, 103: 20 } },
+    "dora": { password: "123", name: "Dora", discounts: { 102: 20, 105: 10 } }
+  };
+
+  let dragIndex = null;
+  let receiptTopZ = 200;
+  let patternInput = [];
+  let isDrawingPattern = false;
+  const correctPattern = [6,7,8];
+
+
+
+  function appIconSvg(type) {
+    const common = 'class="icon-svg" viewBox="0 0 64 64" aria-hidden="true"';
+    const icons = {
+      appstore: `<svg ${common}><path fill="none" stroke="white" stroke-width="6" stroke-linecap="round" d="M17 47h30M24 38l10-22M40 38 30 16M23 38h18"/><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="3"/></svg>`,
+      book: `<svg ${common}><path fill="#fff" d="M12 14c9-3 16-1 20 4 4-5 11-7 20-4v36c-8-3-15-1-20 4-5-5-12-7-20-4z"/><path fill="rgba(124,92,255,.75)" d="M30 20v27c-4-3-8-4-14-3V19c6-1 10 0 14 1zm4 0c4-1 8-2 14-1v25c-6-1-10 0-14 3z"/></svg>`,
+      amazon: `<svg ${common}><rect x="8" y="13" width="48" height="38" rx="10" fill="#fff"/><path fill="#131921" d="M20 25c2-5 8-7 13-4 3 2 4 5 4 9v10h-7v-3c-2 3-5 4-8 4-5 0-9-3-9-8s4-8 11-8h6c0-3-2-4-5-4-2 0-4 1-6 3zm10 6h-5c-3 0-4 1-4 3s1 3 4 3c3 0 5-2 5-6z"/><path fill="#ff9900" d="M18 44c9 5 21 5 31-1 1-1 2 1 1 2-9 9-25 10-34 2-1-1 0-4 2-3z"/></svg>`,
+      rfid: `<svg ${common}><rect x="9" y="12" width="46" height="40" rx="7" fill="#020402" stroke="#73ff9a" stroke-width="3"/><path fill="none" stroke="#73ff9a" stroke-width="4" stroke-linecap="round" d="M20 25l7 7-7 7M32 39h13"/></svg>`,
+      map: `<svg ${common}><path fill="#fff" d="M12 16l14-5 12 5 14-5v37l-14 5-12-5-14 5z"/><path fill="rgba(40,180,135,.75)" d="M26 11v37M38 16v37"/><circle cx="32" cy="30" r="8" fill="#ff5a5f"/><path fill="white" d="M32 42s10-9 10-17a10 10 0 0 0-20 0c0 8 10 17 10 17zm0-13a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/></svg>`,
+      dora: `<svg ${common}><circle cx="32" cy="32" r="22" fill="#fff"/><path fill="#812cff" d="M32 8l5 16 17 8-17 8-5 16-5-16-17-8 17-8z"/><circle cx="32" cy="32" r="5" fill="#ff61cb"/> </svg>`,
+      phone: `<svg class="icon-svg" viewBox="0 0 64 64"><path fill="white" d="M23 12c-3 2-5 5-5 9 0 16 13 29 29 29 4 0 7-2 9-5l-9-9c-2 2-4 3-7 2-6-2-11-7-13-13-1-3 0-5 2-7z"/></svg>`,
+      message: `<svg class="icon-svg" viewBox="0 0 64 64"><path fill="white" d="M12 16h40a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6H30L18 56V46h-6a6 6 0 0 1-6-6V22a6 6 0 0 1 6-6z"/></svg>`,
+      camera: `<svg class="icon-svg" viewBox="0 0 64 64"><path fill="white" d="M20 18l4-6h16l4 6h8a6 6 0 0 1 6 6v22a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V24a6 6 0 0 1 6-6h8zm12 28a12 12 0 1 0 0-24 12 12 0 0 0 0 24zm0-6a6 6 0 1 1 0-12 6 6 0 0 1 0 12z"/></svg>`
+    };
+    return icons[type] || `<span>${type}</span>`;
+  }
+
+  function itemThumbSvg(item) {
+    const base = 'class="item-svg" viewBox="0 0 96 96" aria-hidden="true"';
+    if (item.category === "food") return `<svg ${base}><rect x="12" y="18" width="72" height="58" rx="16" fill="#fff7e6" stroke="#e7c77c" stroke-width="3"/><circle cx="39" cy="48" r="16" fill="#e84141"/><path d="M42 30c5-8 12-9 18-6-3 8-9 11-18 6z" fill="#3aa65a"/><rect x="55" y="42" width="18" height="20" rx="5" fill="#f2c06b"/></svg>`;
+    if (item.category === "electronics") return `<svg ${base}><rect x="20" y="24" width="52" height="44" rx="10" fill="#1f2937"/><rect x="28" y="32" width="36" height="28" rx="4" fill="#9ee6ff"/><path d="M36 76h24" stroke="#1f2937" stroke-width="6" stroke-linecap="round"/><path d="M58 38l-15 17h12l-6 13 18-21H55z" fill="#ffd84a"/></svg>`;
+    if (item.category === "lab") return `<svg ${base}><path d="M34 15h28v12l-7 12v32a12 12 0 0 1-12 12h-6a12 12 0 0 1-12-12V39l9-12z" fill="#eaf5ff" stroke="#57a7ff" stroke-width="4"/><path d="M28 55h31" stroke="#57a7ff" stroke-width="4"/><circle cx="42" cy="63" r="4" fill="#57a7ff"/></svg>`;
+    return `<svg ${base}><rect x="16" y="30" width="64" height="36" rx="12" fill="#fff" stroke="#d9d9d9" stroke-width="4"/><rect x="39" y="18" width="18" height="60" rx="5" fill="#ff6a6a"/><rect x="18" y="39" width="60" height="18" rx="5" fill="#ff6a6a"/></svg>`;
+  }
+
+  function init() {
+    // 시작할 때는 반드시 잠금화면 + 홈 화면만 보이게 한다.
+    // 이전 테스트 중 Amazon 창이 열린 상태처럼 보이는 문제를 막기 위해 앱 창을 명시적으로 닫는다.
+    GAME_STATE.amazonView = "shop";
+    GAME_STATE.activeApp = null;
+    buildPatternLock();
+    renderApps();
+    updateStatus();
+    updateClock();
+    const appWindow = document.getElementById("appWindow");
+    if (appWindow) appWindow.classList.remove("open");
+    setInterval(tickBattery, 6000);
+    setInterval(updateClock, 1000);
+    refreshAmazonDeals();
+    setInterval(simulateAmazonHour, 60000); // 실제 연동 때는 Bakin의 게임 시간 1시간 경과 이벤트에서 호출하면 됨
+  }
+
+  function buildPatternLock() {
+    const area = document.getElementById("patternArea");
+    area.innerHTML = "";
+    for (let i = 0; i < 9; i++) {
+      const dot = document.createElement("div");
+      dot.className = "dot";
+      dot.dataset.index = i;
+      dot.textContent = i + 1;
+      dot.style.left = `${(i % 3) * 104}px`;
+      dot.style.top = `${Math.floor(i / 3) * 104}px`;
+      area.appendChild(dot);
+    }
+
+    area.addEventListener("pointerdown", e => {
+      isDrawingPattern = true;
+      patternInput = [];
+      clearPattern();
+      area.setPointerCapture(e.pointerId);
+      checkPatternPoint(e);
+    });
+    area.addEventListener("pointermove", e => {
+      if (!isDrawingPattern) return;
+      checkPatternPoint(e);
+    });
+    area.addEventListener("pointerup", () => {
+      if (!isDrawingPattern) return;
+      isDrawingPattern = false;
+      const ok = JSON.stringify(patternInput) === JSON.stringify(correctPattern);
+      if (ok) unlockPhone();
+      else {
+        playSfx("error");
+        showToast("패턴이 맞지 않습니다");
+        setTimeout(clearPattern, 450);
+      }
+    });
+    area.addEventListener("pointercancel", () => { isDrawingPattern = false; clearPattern(); });
+    area.addEventListener("pointerleave", () => { if (!isDrawingPattern) clearPattern(); });
+  }
+
+  function checkPatternPoint(e) {
+    const dots = [...document.querySelectorAll(".dot")];
+    const x = e.clientX;
+    const y = e.clientY;
+    for (const dot of dots) {
+      const r = dot.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const d = Math.hypot(cx - x, cy - y);
+      const idx = Number(dot.dataset.index);
+      if (d < 38 && !patternInput.includes(idx)) {
+        patternInput.push(idx);
+        dot.classList.add("active");
+        drawPatternLines();
+      }
+    }
+  }
+
+  function drawPatternLines() {
+    document.querySelectorAll(".pattern-line").forEach(el => el.remove());
+    const area = document.getElementById("patternArea");
+    for (let i = 0; i < patternInput.length - 1; i++) {
+      const a = document.querySelector(`.dot[data-index='${patternInput[i]}']`);
+      const b = document.querySelector(`.dot[data-index='${patternInput[i+1]}']`);
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      const rr = area.getBoundingClientRect();
+      const ax = ar.left + ar.width/2 - rr.left;
+      const ay = ar.top + ar.height/2 - rr.top;
+      const bx = br.left + br.width/2 - rr.left;
+      const by = br.top + br.height/2 - rr.top;
+      const line = document.createElement("div");
+      line.className = "pattern-line show";
+      line.style.left = `${ax}px`;
+      line.style.top = `${ay-4}px`;
+      line.style.width = `${Math.hypot(bx-ax, by-ay)}px`;
+      line.style.transform = `rotate(${Math.atan2(by-ay, bx-ax)}rad)`;
+      area.appendChild(line);
+    }
+  }
+
+  function clearPattern() {
+    document.querySelectorAll(".dot").forEach(d => d.classList.remove("active"));
+    document.querySelectorAll(".pattern-line").forEach(el => el.remove());
+  }
+
+  function unlockPhone() {
+    playSfx("unlock");
+    document.getElementById("lockScreen").classList.add("unlocked");
+    document.getElementById("lockIcon").textContent = "🔓";
+    callGameEvent("PHONE_UNLOCKED");
+  }
+
+  function renderApps() {
+    const grid = document.getElementById("appGrid");
+    grid.innerHTML = "";
+    GAME_STATE.installedApps.forEach((id, index) => {
+      const app = APP_LIBRARY[id];
+      const el = document.createElement("div");
+      el.className = "app-icon";
+      el.draggable = true;
+      el.dataset.index = index;
+      el.innerHTML = `<div class="icon-art" style="background:${app.color}">${appIconSvg(app.icon)}</div><span class="app-name">${app.name}</span>`;
+      el.addEventListener("click", () => openApp(id));
+      el.addEventListener("dragstart", () => dragIndex = index);
+      el.addEventListener("dragover", e => e.preventDefault());
+      el.addEventListener("drop", e => {
+        e.preventDefault();
+        const dropIndex = Number(el.dataset.index);
+        reorderApps(dragIndex, dropIndex);
+      });
+      grid.appendChild(el);
+    });
+  }
+
+  function reorderApps(from, to) {
+    if (from === null || from === to) return;
+    const moved = GAME_STATE.installedApps.splice(from, 1)[0];
+    GAME_STATE.installedApps.splice(to, 0, moved);
+    dragIndex = null;
+    renderApps();
+    callGameEvent("APP_ORDER_CHANGED:" + GAME_STATE.installedApps.join(","));
+  }
+
+  function openApp(id) {
+    playSfx("appOpen");
+    if (id === "appstore" && !GAME_STATE.wifi) {
+      showToast("Wi-Fi가 없어 App Store를 열 수 없습니다");
+      callGameEvent("APPSTORE_NO_WIFI");
+      return;
+    }
+    if (id === "appstore") return openStore();
+    if (id === "amazon") return openAmazon("shop");
+    if (id === "bookven") return openSimpleApp("BookVen", "도서관 검색", "등록번호, 자료상태, 대출 가능 여부를 확인하는 앱입니다.");
+    if (id === "rfid") return openRFID();
+    if (id === "campusmap") return openSimpleApp("Campus Map", "위치 찾기", "위치 아이콘이 켜져 있을 때 실습실과 건물 위치를 표시합니다.");
+    if (id === "doranet") return openSimpleApp("DoraNet", "DoraNet", "이 앱은 설치한 기억이 없는데 이미 설치되어 있는 것 같습니다.");
+  }
+
+  function openWindow(title, html, appId = null) {
+    GAME_STATE.activeApp = appId;
+    document.getElementById("windowTitle").textContent = title;
+    document.getElementById("windowBody").innerHTML = html;
+    document.getElementById("appWindow").classList.add("open");
+  }
+
+  function closeWindow() {
+    playSfx("appClose");
+    GAME_STATE.activeApp = null;
+    document.getElementById("appWindow").classList.remove("open");
+  }
+
+  function openStore() {
+    const cards = STORE_APPS.map(id => {
+      const app = APP_LIBRARY[id];
+      const installed = GAME_STATE.installedApps.includes(id);
+      return `
+        <div class="app-card">
+          <div class="store-icon" style="background:${app.color}">${appIconSvg(app.icon)}</div>
+          <div class="app-meta">
+            <h3>${app.name}</h3>
+            <p>${app.desc}</p>
+            <div class="stats"><span>★ ${app.rating}</span><span>${app.recommends}</span><span>${app.downloads} 다운로드</span></div>
+          </div>
+          <button class="download-btn ${installed ? "installed" : ""}" onclick="event.stopPropagation(); ${installed ? `openApp('${id}')` : `downloadApp('${id}')`}">${installed ? "열기" : "받기"}</button>
+        </div>`;
+    }).join("");
+
+    openWindow("App Store", `
+      <div class="store-hero">
+        <h2>Today</h2>
+        <p>친구의 휴대폰에서 필요한 앱을 설치하세요.</p>
+      </div>
+      ${cards}
+    `, "appstore");
+  }
+
+  function downloadApp(id) {
+    playSfx("download");
+    if (!GAME_STATE.wifi) {
+      showToast("다운로드 실패: Wi-Fi 없음");
+      callGameEvent("DOWNLOAD_FAIL_NO_WIFI:" + id);
+      return;
+    }
+    if (!GAME_STATE.installedApps.includes(id)) {
+      GAME_STATE.installedApps.push(id);
+      renderApps();
+      callGameEvent("APP_DOWNLOADED:" + id);
+      playSfx("success");
+      showToast(APP_LIBRARY[id].name + " 설치 완료");
+      openStore();
+    }
+  }
+
+  function getItem(variable) {
+    return SHOP_ITEMS.find(item => item.variable === Number(variable));
+  }
+
+  function getUserDiscount(item) {
+    if (!GAME_STATE.amazonLoggedIn || !GAME_STATE.amazonUserId) return 0;
+    return AMAZON_ACCOUNTS[GAME_STATE.amazonUserId]?.discounts?.[item.variable] || 0;
+  }
+
+  function getHourlyDiscount(item) {
+    return GAME_STATE.amazonDeals[item.variable] || 0;
+  }
+
+  function getBestDiscount(item) {
+    return Math.max(getUserDiscount(item), getHourlyDiscount(item));
+  }
+
+  function getFinalPrice(item) {
+    const discount = getBestDiscount(item);
+    return Math.ceil(item.price * (100 - discount) / 100);
+  }
+
+  function cartCount() {
+    return GAME_STATE.amazonCart.reduce((sum, entry) => sum + entry.qty, 0);
+  }
+
+  function openAmazon(view = GAME_STATE.amazonView || "shop") {
+    GAME_STATE.amazonView = view;
+    let body = "";
+    if (view === "cart") body = renderAmazonCart();
+    else if (view === "login") body = renderAmazonLogin();
+    else if (view === "signup") body = renderAmazonSignup();
+    else body = renderAmazonShop();
+
+    openWindow("Amazon", `
+      <div class="amazon-page">
+        <div class="amazon-header">
+          <div class="amazon-logo-row"><div class="amazon-logo">amazon<span>.com</span></div><div class="amazon-prime-pill">FastPack</div></div>
+          <div class="amazon-search"><input value="school survival supplies" readonly><button>🔍</button></div>
+        </div>
+        <div class="amazon-sub">Deliver to River Ridge · Next morning package box</div>
+        ${body}
+        <button class="amazon-floating-cart" onclick="openAmazon('cart')">🛒<span class="amazon-cart-badge">${cartCount()}</span></button>
+      </div>
+    `, "amazon");
+  }
+
+  function renderAmazonAccountBox() {
+    if (GAME_STATE.amazonLoggedIn) {
+      const user = AMAZON_ACCOUNTS[GAME_STATE.amazonUserId];
+      return `
+        <div class="amazon-account">
+          <div><b>${user.name}님 환영합니다!</b><br><small>일부 상품에 계정별 할인이 적용될 수 있습니다.</small></div>
+          <div class="amazon-account-actions">
+            <button class="amazon-small-btn" onclick="claimCoupon()">쿠폰받기</button>
+            <button class="amazon-small-btn dark" onclick="amazonLogout()">로그아웃</button>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="amazon-account">
+        <div><b>로그인이 필요합니다</b><br><small>결제 전 계정 확인이 필요합니다.</small></div>
+        <div class="amazon-account-actions">
+          <button class="amazon-small-btn" onclick="openAmazon('login')">로그인</button>
+          <button class="amazon-small-btn dark" onclick="openAmazon('signup')">회원가입</button>
+        </div>
+      </div>`;
+  }
+
+  function renderAmazonShop() {
+    const tabs = AMAZON_CATEGORIES.map(cat => `
+      <button class="amazon-tab ${GAME_STATE.amazonCategory === cat.id ? "active" : ""}" onclick="setAmazonCategory('${cat.id}')">${cat.label}</button>
+    `).join("");
+
+    const itemHtml = SHOP_ITEMS
+      .filter(item => item.category === GAME_STATE.amazonCategory)
+      .map((item, idx) => renderAmazonItem(item, idx))
+      .join("");
+
+    return `
+      ${renderAmazonAccountBox()}
+      <div class="amazon-tabs">${tabs}</div>
+      <div class="amazon-list">${itemHtml || "<div class='amazon-cart-panel'>이 탭에는 상품이 없습니다.</div>"}</div>
+    `;
+  }
+
+  function renderAmazonItem(item, idx) {
+    const discount = getBestDiscount(item);
+    const finalPrice = getFinalPrice(item);
+    const expanded = GAME_STATE.amazonExpanded === item.variable;
+    const stockText = item.stock <= 0 ? "품절" : `재고 ${item.stock}`;
+    return `
+      <div class="amazon-item" onclick="toggleAmazonItem(${item.variable})">
+        <div class="amazon-thumb">${itemThumbSvg(item)}</div>
+        <div>
+          <h3>${item.name}</h3>
+          <div class="stars">★★★★★ <span style="color:#007185">${41 + idx * 17} reviews</span></div>
+          <div class="amazon-price">
+            $${finalPrice}
+            ${discount ? `<span class="amazon-original">$${item.price}</span><span class="amazon-discount">-${discount}%</span>` : ""}
+          </div>
+          <div class="amazon-meta">${stockText} · IN ${item.variable} · <span class="prime">FastPack</span> 내일 아침</div>
+        </div>
+        ${expanded ? `
+          <div class="amazon-detail" onclick="event.stopPropagation()">
+            ${item.desc}<br>
+            <small>장바구니에 담아도 결제 시점에 재고가 부족하면 구매할 수 없습니다.</small><br>
+            <button class="amazon-cart-btn" ${item.stock <= 0 ? "disabled" : ""} onclick="addToCart(${item.variable})">장바구니에 담기</button>
+          </div>` : ""}
+      </div>`;
+  }
+
+  function renderAmazonCart() {
+    if (GAME_STATE.amazonCart.length === 0) {
+      return `${renderAmazonAccountBox()}<div class="amazon-cart-panel"><b>장바구니가 비어 있습니다.</b><br><small>상품을 눌러 설명을 펼친 뒤 장바구니에 담아보세요.</small></div>`;
+    }
+
+    const rows = GAME_STATE.amazonCart.map(entry => {
+      const item = getItem(entry.variable);
+      if (!item) return "";
+      const price = getFinalPrice(item);
+      return `
+        <div class="amazon-cart-row">
+          <div>
+            <b>${item.icon} ${item.name}</b><br>
+            <small>IN ${item.variable} · 재고 ${item.stock} · 개당 $${price}</small>
+          </div>
+          <div class="qty-controls">
+            <button onclick="changeCartQty(${item.variable}, -1)">−</button>
+            <b>${entry.qty}</b>
+            <button onclick="changeCartQty(${item.variable}, 1)">+</button>
+          </div>
+        </div>`;
+    }).join("");
+
+    return `
+      ${renderAmazonAccountBox()}
+      <div class="amazon-cart-panel">
+        <h3>장바구니</h3>
+        ${rows}
+        <div style="margin-top:12px"><b>합계: $${cartTotal()}</b></div>
+        <button class="amazon-checkout" onclick="checkoutAmazon()">결제하기</button>
+        <button class="amazon-small-btn dark" style="margin-top:8px" onclick="openAmazon('shop')">상점으로 돌아가기</button>
+      </div>`;
+  }
+
+  function renderAmazonLogin() {
+    return `
+      <div class="amazon-login-panel">
+        <h3>Amazon 로그인</h3>
+        <div class="amazon-form">
+          <input id="amazonLoginId" placeholder="아이디" value="123">
+          <input id="amazonLoginPw" placeholder="비밀번호" type="password" value="123">
+          <button class="amazon-checkout" onclick="amazonLogin()">로그인</button>
+          <button class="amazon-small-btn dark" onclick="openAmazon('shop')">돌아가기</button>
+          <div class="amazon-warning" id="amazonLoginMsg">테스트 계정: 아이디 123 / 비밀번호 123</div>
+        </div>
+      </div>`;
+  }
+
+  function renderAmazonSignup() {
+    return `
+      <div class="amazon-signup-panel">
+        <h3>회원가입</h3>
+        <p>현재 서버가 혼잡하니 관리자에게 문의해 주세요.</p>
+        <button class="amazon-small-btn dark" onclick="openAmazon('shop')">돌아가기</button>
+      </div>`;
+  }
+
+  function setAmazonCategory(category) {
+    GAME_STATE.amazonCategory = category;
+    GAME_STATE.amazonExpanded = null;
+    openAmazon('shop');
+  }
+
+  function toggleAmazonItem(variable) {
+    GAME_STATE.amazonExpanded = GAME_STATE.amazonExpanded === variable ? null : variable;
+    openAmazon('shop');
+  }
+
+  function addToCart(variable) {
+    const item = getItem(variable);
+    if (!item || item.stock <= 0) {
+      playSfx("error");
+      showToast("품절된 상품입니다");
+      callGameEvent("AMAZON_CART_FAIL_OUT_OF_STOCK:IN" + variable);
+      return;
+    }
+    const entry = GAME_STATE.amazonCart.find(x => x.variable === variable);
+    if (entry) entry.qty += 1;
+    else GAME_STATE.amazonCart.push({ variable, qty: 1 });
+    showToast("장바구니에 담았습니다");
+    callGameEvent("AMAZON_CART_ADD:IN" + variable);
+    openAmazon('shop');
+  }
+
+  function changeCartQty(variable, delta) {
+    const entry = GAME_STATE.amazonCart.find(x => x.variable === variable);
+    if (!entry) return;
+    entry.qty += delta;
+    if (entry.qty <= 0) GAME_STATE.amazonCart = GAME_STATE.amazonCart.filter(x => x.variable !== variable);
+    openAmazon('cart');
+  }
+
+  function cartTotal() {
+    return GAME_STATE.amazonCart.reduce((sum, entry) => {
+      const item = getItem(entry.variable);
+      return item ? sum + getFinalPrice(item) * entry.qty : sum;
+    }, 0);
+  }
+
+  function checkoutAmazon() {
+    if (!GAME_STATE.amazonLoggedIn) {
+      showToast("결제 전 로그인이 필요합니다");
+      openAmazon('login');
+      return;
+    }
+
+    for (const entry of GAME_STATE.amazonCart) {
+      const item = getItem(entry.variable);
+      if (!item || item.stock < entry.qty) {
+        showToast("상점 재고가 부족합니다");
+        callGameEvent("AMAZON_CHECKOUT_FAIL_STOCK:IN" + entry.variable);
+        openAmazon('cart');
+        return;
+      }
+    }
+
+    const total = cartTotal();
+    if (GAME_STATE.money < total) {
+      showToast("잔액이 부족합니다!");
+      callGameEvent("AMAZON_CHECKOUT_FAIL_MONEY:" + total);
+      return;
+    }
+
+    GAME_STATE.money -= total;
+    for (const entry of GAME_STATE.amazonCart) {
+      const item = getItem(entry.variable);
+      item.stock -= entry.qty;
+      GAME_STATE.deliveries.push({ variable: item.variable, qty: entry.qty, name: item.name, receive: "NEXT_MORNING" });
+      callGameEvent(`AMAZON_PURCHASED:IN${item.variable}:QTY${entry.qty}:PRICE${getFinalPrice(item)}:NEXT_MORNING`);
+    }
+    GAME_STATE.amazonCart = [];
+    showToast("결제 완료 · 내일 아침 택배함 확인");
+    openAmazon('shop');
+  }
+
+  function amazonLogin() {
+    playSfx("success");
+    const id = document.getElementById("amazonLoginId")?.value.trim();
+    const pw = document.getElementById("amazonLoginPw")?.value.trim();
+    const account = AMAZON_ACCOUNTS[id];
+    if (!account || account.password !== pw) {
+      const msg = document.getElementById("amazonLoginMsg");
+      if (msg) msg.textContent = "아이디 또는 비밀번호가 맞지 않습니다.";
+      showToast("로그인 실패");
+      return;
+    }
+    GAME_STATE.amazonLoggedIn = true;
+    GAME_STATE.amazonUserId = id;
+    showToast(account.name + "님 환영합니다");
+    callGameEvent("AMAZON_LOGIN:" + id);
+    openAmazon('shop');
+  }
+
+  function amazonLogout() {
+    playSfx("appClose");
+    callGameEvent("AMAZON_LOGOUT:" + GAME_STATE.amazonUserId);
+    GAME_STATE.amazonLoggedIn = false;
+    GAME_STATE.amazonUserId = null;
+    showToast("로그아웃했습니다");
+    openAmazon('shop');
+  }
+
+  function claimCoupon() {
+    playSfx("success");
+    showToast("쿠폰을 확인했습니다");
+    callGameEvent("AMAZON_COUPON_CHECK:" + GAME_STATE.amazonUserId);
+  }
+
+  function refreshAmazonDeals() {
+    GAME_STATE.amazonDeals = {};
+    const shuffled = [...SHOP_ITEMS].sort(() => Math.random() - 0.5);
+    const dealCount = Math.min(2, shuffled.length);
+    for (let i = 0; i < dealCount; i++) {
+      GAME_STATE.amazonDeals[shuffled[i].variable] = Math.random() < 0.5 ? 10 : 20;
+    }
+    callGameEvent("AMAZON_HOURLY_DEALS_REFRESHED");
+  }
+
+  function simulateAmazonHour() {
+    refreshAmazonDeals();
+    const candidates = SHOP_ITEMS.filter(item => item.stock > 0).sort(() => Math.random() - 0.5);
+    for (const item of candidates.slice(0, 2)) {
+      if (Math.random() < 0.6) item.stock = Math.max(0, item.stock - 1);
+    }
+    const appWindow = document.getElementById("appWindow");
+    const amazonIsOpen = GAME_STATE.activeApp === "amazon" && appWindow && appWindow.classList.contains("open");
+    if (amazonIsOpen && (GAME_STATE.amazonView === "shop" || GAME_STATE.amazonView === "cart")) openAmazon(GAME_STATE.amazonView);
+  }
+
+  function openRFID() {
+    openWindow("RFID Input", `
+      <div class="rfid-terminal">
+        <h2>RFID_OUTPUT.exe</h2>
+        <div class="rfid-log" id="rfidLog">
+          > BOOT SEQUENCE COMPLETE<br>
+          > LOCAL READER: STANDBY<br>
+          > INPUT VARIABLE NUMBER<br>
+          > OUTPUT SIGNAL WILL BE SENT TO NEARBY LOCK
+        </div>
+        <div class="rfid-input-row">
+          <input id="rfidValue" inputmode="numeric" placeholder="예: 100" autofocus>
+          <button onclick="submitRFID()">OUTPUT</button>
+        </div>
+        <div class="rfid-note">출력 예시: RFID_OUTPUT_VAR:100 → Bakin에서 근처 문 열림 이벤트 처리</div>
+      </div>
+    `, "rfid");
+    setTimeout(() => document.getElementById("rfidValue")?.focus(), 50);
+  }
+
+  function submitRFID() {
+    const input = document.getElementById("rfidValue");
+    const value = (input?.value || "").trim();
+    const log = document.getElementById("rfidLog");
+    if (!/^\d+$/.test(value)) {
+      showToast("숫자 변수만 입력 가능합니다");
+      if (log) log.innerHTML += `<br>> ERROR: INVALID INPUT`;
+      return;
+    }
+    callGameEvent("RFID_OUTPUT_VAR:" + value);
+    showToast("RFID 변수 " + value + " 출력");
+    if (log) log.innerHTML += `<br>> OUTPUT VAR ${value}<br>> SIGNAL SENT TO NEARBY LOCK`;
+  }
+
+  function openSimpleApp(title, heading, body) {
+    openWindow(title, `
+      <div class="simple-page">
+        <h2>${heading}</h2>
+        <div class="simple-card">${body}</div>
+        <div class="simple-card"><button class="buy-btn" onclick="callGameEvent('${title.toUpperCase().replaceAll(' ', '_')}_ACTION')">게임 이벤트 호출 테스트</button></div>
+      </div>
+    `, title.toLowerCase().replaceAll(" ", "_"));
+  }
+
+
+  const ABILITY_POOL = [
+    { id: 1, icon: "⚡", title: "Quick Step", desc: "이동 관련 어빌리티를 강화합니다.", stat: "SPD" },
+    { id: 2, icon: "🩹", title: "First Aid", desc: "응급처치와 회복 효율을 올립니다.", stat: "HEAL" },
+    { id: 3, icon: "🧠", title: "Sharp Memory", desc: "전화번호와 단서 기억 능력이 좋아집니다.", stat: "MEMORY" },
+    { id: 4, icon: "🔋", title: "Battery Saver", desc: "휴대폰 배터리 소모 관련 효과를 완화합니다.", stat: "BATTERY" },
+    { id: 5, icon: "📦", title: "Smart Shopper", desc: "상점과 배송 관련 보너스를 얻습니다.", stat: "SHOP" },
+    { id: 6, icon: "📡", title: "Signal Catcher", desc: "와이파이와 블루투스 감지 범위가 넓어집니다.", stat: "SIGNAL" },
+    { id: 7, icon: "🔐", title: "Lock Sense", desc: "RFID와 잠금장치 판정에 보너스를 얻습니다.", stat: "LOCK" },
+    { id: 8, icon: "🍎", title: "Snack Logic", desc: "배고픔 감소와 음식 사용 효율을 개선합니다.", stat: "HUNGER" },
+    { id: 9, icon: "✨", title: "Dora's Glitch", desc: "희귀한 상황에서 이상한 보너스가 발생합니다.", stat: "GLITCH" }
+  ];
+
+  const RARITY_INFO = {
+    silver: { label: "SILVER", weight: 68, boost: 1 },
+    gold: { label: "GOLD", weight: 25, boost: 2 },
+    rainbow: { label: "RAINBOW", weight: 7, boost: 3 }
+  };
+
+  function randomRarity() {
+    const roll = Math.random() * 100;
+    if (roll < RARITY_INFO.rainbow.weight) return "rainbow";
+    if (roll < RARITY_INFO.rainbow.weight + RARITY_INFO.gold.weight) return "gold";
+    return "silver";
+  }
+
+  function rollAbilityCard() {
+    const base = ABILITY_POOL[Math.floor(Math.random() * ABILITY_POOL.length)];
+    return { ...base, rarity: randomRarity(), uid: Date.now() + "_" + Math.random().toString(16).slice(2) };
+  }
+
+  function openAbilityTuner() {
+    GAME_STATE.activeApp = "ability";
+    GAME_STATE.abilityCards = [rollAbilityCard(), rollAbilityCard(), rollAbilityCard()];
+    GAME_STATE.abilityLocked = [false, false, false];
+    GAME_STATE.abilityRefreshUsed = false;
+    GAME_STATE.abilityLoadingPhase = "loading";
+    openWindow("Ability Tuner", `
+      <div class="ability-page">
+        <div class="ability-loading">
+          <div>
+            <div class="ability-spinner"></div>
+            <b>Connecting to Ability Tuner...</b>
+            <div class="ability-sub">게임 변수 신호를 분석하는 중</div>
+          </div>
+        </div>
+      </div>
+    `, "ability");
+
+    setTimeout(() => {
+      if (GAME_STATE.activeApp !== "ability") return;
+      openWindow("Ability Tuner", `
+        <div class="ability-page">
+          <div class="ability-loading">
+            <div class="ability-wink-flash"></div>
+            <div>
+              <div class="ability-wink">😉</div>
+              <b>Signal accepted!</b>
+            </div>
+          </div>
+        </div>
+      `, "ability");
+    }, 900);
+
+    setTimeout(() => {
+      if (GAME_STATE.activeApp !== "ability") return;
+      GAME_STATE.abilityLoadingPhase = "cards";
+      renderAbilityCards();
+    }, 1700);
+  }
+
+  function renderAbilityCards() {
+    const cards = GAME_STATE.abilityCards.map((card, index) => {
+      const locked = GAME_STATE.abilityLocked[index];
+      const rarity = RARITY_INFO[card.rarity].label;
+      return `
+        <div class="ability-card ${card.rarity} ${locked ? "locked" : ""}">
+          <button class="ability-lock-btn ${locked ? "locked" : ""}" onclick="toggleAbilityLock(${index})">${locked ? "🔒" : "🔓"}</button>
+          <div class="ability-main">
+            <div class="ability-icon">${card.icon}</div>
+            <div>
+              <div class="ability-title">${card.title}</div>
+              <div class="ability-desc">${card.desc}</div>
+              <span class="ability-rarity">${rarity} · ${card.stat} +${RARITY_INFO[card.rarity].boost}</span>
+            </div>
+          </div>
+          <button class="ability-select-btn" onclick="selectAbilityCard(${index})">SELECT</button>
+        </div>
+      `;
+    }).join("");
+
+    openWindow("Ability Tuner", `
+      <div class="ability-page">
+        <div class="ability-header">
+          <h2 class="choose-one">Choose one!</h2>
+          <div class="ability-sub">잠금한 카드는 새로고침해도 유지됩니다.</div>
+        </div>
+        <div class="ability-control-row">
+          <button class="ability-refresh-btn" onclick="rerollAbilityCards()" ${GAME_STATE.abilityRefreshUsed ? "disabled" : ""}>
+            ${GAME_STATE.abilityRefreshUsed ? "Refresh used" : "↻ Refresh once"}
+          </button>
+        </div>
+        <div class="ability-cards">${cards}</div>
+      </div>
+    `, "ability");
+  }
+
+  function toggleAbilityLock(index) {
+    playSfx("lock");
+    GAME_STATE.abilityLocked[index] = !GAME_STATE.abilityLocked[index];
+    callGameEvent(`ABILITY_CARD_LOCK:${index}:${GAME_STATE.abilityLocked[index] ? 1 : 0}`);
+    renderAbilityCards();
+  }
+
+  function rerollAbilityCards() {
+    playSfx("reroll");
+    if (GAME_STATE.abilityRefreshUsed) {
+      playSfx("error");
+      showToast("새로고침은 한 번만 가능합니다");
+      return;
+    }
+    GAME_STATE.abilityCards = GAME_STATE.abilityCards.map((card, index) => {
+      return GAME_STATE.abilityLocked[index] ? card : rollAbilityCard();
+    });
+    GAME_STATE.abilityRefreshUsed = true;
+    callGameEvent("ABILITY_REROLL_USED");
+    renderAbilityCards();
+  }
+
+  function selectAbilityCard(index) {
+    playSfx("success");
+    const card = GAME_STATE.abilityCards[index];
+    const boost = RARITY_INFO[card.rarity].boost;
+    callGameEvent(`ABILITY_SELECTED:${card.id}:${card.stat}:${card.rarity}:${boost}`);
+    closeWindow();
+    printAbilityReceipt(card, boost);
+    playBlehEffect();
+  }
+
+
+
+  function playSfx(type = "tap") {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      const tone = (freq, start, dur, wave = "sine", vol = 0.035, endFreq = null) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = wave;
+        osc.frequency.setValueAtTime(freq, now + start);
+        if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, now + start + dur);
+        gain.gain.setValueAtTime(0.0001, now + start);
+        gain.gain.exponentialRampToValueAtTime(vol, now + start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + start);
+        osc.stop(now + start + dur + 0.02);
+      };
+
+      const noise = (start, dur, vol = 0.028) => {
+        const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        const source = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        source.buffer = buffer;
+        gain.gain.setValueAtTime(vol, now + start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+        source.connect(gain).connect(ctx.destination);
+        source.start(now + start);
+        source.stop(now + start + dur);
+      };
+
+      switch (type) {
+        case "appOpen":
+          tone(420, 0.00, 0.07, "sine", 0.035, 640);
+          tone(760, 0.07, 0.09, "sine", 0.032, 1040);
+          break;
+        case "appClose":
+          tone(620, 0.00, 0.08, "sine", 0.025, 360);
+          break;
+        case "download":
+          tone(520, 0.00, 0.06, "triangle", 0.032, 680);
+          tone(680, 0.07, 0.06, "triangle", 0.032, 860);
+          tone(920, 0.15, 0.12, "sine", 0.04, 1280);
+          break;
+        case "button":
+          tone(560, 0.00, 0.045, "square", 0.018, 720);
+          break;
+        case "success":
+          tone(660, 0.00, 0.07, "sine", 0.035, 880);
+          tone(990, 0.08, 0.12, "sine", 0.038, 1320);
+          break;
+        case "error":
+          tone(220, 0.00, 0.10, "sawtooth", 0.04, 180);
+          tone(170, 0.11, 0.12, "sawtooth", 0.035, 135);
+          break;
+        case "lock":
+          tone(300, 0.00, 0.05, "square", 0.035, 260);
+          noise(0.035, 0.055, 0.018);
+          break;
+        case "unlock":
+          tone(360, 0.00, 0.06, "triangle", 0.032, 520);
+          tone(780, 0.07, 0.09, "sine", 0.036, 1120);
+          break;
+        case "reroll":
+          for (let i = 0; i < 6; i++) tone(420 + i * 85, i * 0.035, 0.07, "triangle", 0.02, 580 + i * 95);
+          noise(0.02, 0.22, 0.012);
+          break;
+        case "cart":
+          tone(440, 0.00, 0.05, "triangle", 0.025, 590);
+          tone(740, 0.06, 0.07, "triangle", 0.025, 910);
+          break;
+        case "cash":
+          tone(880, 0.00, 0.04, "square", 0.028, 950);
+          tone(1320, 0.05, 0.07, "sine", 0.032, 1600);
+          noise(0.02, 0.10, 0.01);
+          break;
+        case "type":
+          tone(700 + Math.random() * 90, 0.00, 0.025, "square", 0.012);
+          break;
+        case "bleh":
+          tone(420, 0.00, 0.14, "sawtooth", 0.035, 180);
+          noise(0.08, 0.22, 0.018);
+          break;
+        default:
+          tone(560, 0.00, 0.045, "square", 0.018, 720);
+      }
+
+      setTimeout(() => ctx.close && ctx.close(), 900);
+    } catch (_) {
+      // Some browsers block audio until the first user interaction.
+    }
+  }
+
+
+  function playReceiptPrintSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // short confirmation beep
+      const beep = ctx.createOscillator();
+      const beepGain = ctx.createGain();
+      beep.type = "square";
+      beep.frequency.setValueAtTime(880, now);
+      beep.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+      beepGain.gain.setValueAtTime(0.0001, now);
+      beepGain.gain.exponentialRampToValueAtTime(0.055, now + 0.01);
+      beepGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+      beep.connect(beepGain).connect(ctx.destination);
+      beep.start(now);
+      beep.stop(now + 0.18);
+
+      // printer ticking sound
+      for (let i = 0; i < 16; i++) {
+        const t = now + 0.22 + i * 0.07;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(95 + (i % 3) * 18, t);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.035, t + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.05);
+      }
+
+      setTimeout(() => ctx.close && ctx.close(), 1800);
+    } catch (_) {
+      // Browser may block audio until user interaction; selecting a card usually counts as interaction.
+    }
+  }
+
+  function printAbilityReceipt(card, boost) {
+    const layer = document.getElementById("receiptLayer");
+    if (!layer) return;
+    playReceiptPrintSound();
+    const rarityLabel = RARITY_INFO[card.rarity].label;
+    const receipt = document.createElement("div");
+    receipt.className = "ability-receipt";
+    const serial = "AT-" + new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 12) + "-" + Math.floor(Math.random() * 9000 + 1000);
+    receipt.innerHTML = `
+      <button class="receipt-close" onclick="this.parentElement.remove()">×</button>
+      <div class="receipt-title">★ ★ ★<br>ABILITY RECEIPT</div>
+      <div class="receipt-line"><span>STATUS</span><b>SELECTED</b></div>
+      <div class="receipt-line"><span>DATE</span><b>${new Date().toLocaleDateString()}</b></div>
+      <div class="receipt-line"><span>ID</span><b>${serial}</b></div>
+      <div class="receipt-line"><span>RARITY</span><b>${rarityLabel}</b></div>
+      <div class="receipt-line"><span>CODE</span><b>${card.stat}</b></div>
+      <div class="receipt-line"><span>BOOST</span><b>+${boost}</b></div>
+      <div class="receipt-result">» SELECTED ABILITY «</div>
+      <div class="receipt-ability-box">
+        <div class="receipt-ability-icon">${card.icon}</div>
+        <div>
+          <b>${card.title}</b><br>
+          <span style="font-size:10px;line-height:1.25;display:block;margin-top:3px;">${card.desc}</span>
+        </div>
+      </div>
+      <div class="receipt-power">POWER IS YOURS!</div>
+      <div class="receipt-wise">— Use it wisely. —</div>
+      <div class="receipt-barcode"></div>
+      <div class="receipt-small">THANK YOU! ☺<br>drag this receipt · generated by AT</div>
+    `;
+    const count = layer.querySelectorAll(".ability-receipt").length;
+    receipt.style.left = `calc(50% + ${(count % 3) * 8 - 8}px)`;
+    layer.appendChild(receipt);
+    receipt.style.zIndex = String(++receiptTopZ);
+    callGameEvent("ABILITY_RECEIPT_PRINTED");
+    makeReceiptDraggable(receipt);
+  }
+
+  function makeReceiptDraggable(el) {
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let baseX = 0;
+    let baseY = 0;
+
+    el.addEventListener("pointerdown", e => {
+      if (e.target.classList.contains("receipt-close")) return;
+      dragging = true;
+      el.style.zIndex = String(++receiptTopZ);
+      el.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = el.getBoundingClientRect();
+      const parentRect = el.parentElement.getBoundingClientRect();
+      baseX = rect.left - parentRect.left;
+      baseY = rect.top - parentRect.top;
+      el.style.left = baseX + "px";
+      el.style.top = baseY + "px";
+      el.style.bottom = "auto";
+      el.style.transform = "none";
+      el.style.animation = "none";
+    });
+
+    el.addEventListener("pointermove", e => {
+      if (!dragging) return;
+      const nextX = baseX + (e.clientX - startX);
+      const nextY = baseY + (e.clientY - startY);
+      el.style.left = nextX + "px";
+      el.style.top = nextY + "px";
+    });
+
+    el.addEventListener("pointerup", e => {
+      dragging = false;
+      try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    el.addEventListener("pointercancel", () => dragging = false);
+  }
+
+  function playBlehEffect() {
+    playSfx("bleh");
+    const layer = document.getElementById("receiptLayer");
+    if (!layer) return;
+    const face = document.createElement("div");
+    face.className = "bleh-effect";
+    face.textContent = "😝";
+    const text = document.createElement("div");
+    text.className = "bleh-text";
+    text.textContent = "BLEH!";
+    layer.appendChild(face);
+    layer.appendChild(text);
+    setTimeout(() => {
+      face.remove();
+      text.remove();
+    }, 3100);
+  }
+
+
+  function updateStatus() {
+    document.getElementById("wifiIcon").classList.toggle("on", GAME_STATE.wifi);
+    document.getElementById("bluetoothIcon").classList.toggle("on", GAME_STATE.bluetooth);
+    document.getElementById("locationIcon").classList.toggle("on", GAME_STATE.location);
+    const batteryText = document.getElementById("batteryText");
+    const fill = document.getElementById("batteryFill");
+    batteryText.textContent = GAME_STATE.battery;
+    fill.style.transform = `scaleX(${GAME_STATE.battery / 100})`;
+
+    const batteryIcon = document.getElementById("batteryIcon");
+    batteryIcon.style.color = GAME_STATE.battery <= 20 ? "var(--danger)" : GAME_STATE.battery <= 50 ? "var(--yellow)" : "white";
+    document.querySelector(".screen")?.classList.toggle("battery-low", GAME_STATE.battery <= 20);
+  }
+
+  function tickBattery() {
+    if (GAME_STATE.battery <= 20) return;
+    drainBattery(2);
+  }
+
+  function drainBattery(amount) {
+    const before = GAME_STATE.battery;
+    if (before <= 20 && amount <= 2) return;
+    GAME_STATE.battery = Math.max(0, GAME_STATE.battery - amount);
+    GAME_STATE.hunger = Math.max(0, GAME_STATE.hunger - amount);
+    updateStatus();
+
+    callGameEvent(`BATTERY_CHANGED:${GAME_STATE.battery}:HUNGER:${GAME_STATE.hunger}`);
+
+    if (before > 50 && GAME_STATE.battery <= 50) {
+      GAME_STATE.gameHour += 1;
+      callGameEvent("BATTERY_50_TIME_CHANGED");
+      showToast("시간이 흘렀습니다");
+    }
+    if (before > 20 && GAME_STATE.battery <= 20) {
+      callGameEvent("BATTERY_20_FORCE_HOME");
+      showToast("배터리 부족 · 집으로 돌아가야 합니다");
+    }
+  }
+
+  function toggleWifi() {
+    playSfx("button");
+    GAME_STATE.wifi = !GAME_STATE.wifi;
+    updateStatus();
+    callGameEvent("WIFI:" + (GAME_STATE.wifi ? "ON" : "OFF"));
+  }
+
+  function toggleBluetooth() {
+    playSfx("button");
+    GAME_STATE.bluetooth = !GAME_STATE.bluetooth;
+    updateStatus();
+    callGameEvent("BLUETOOTH:" + (GAME_STATE.bluetooth ? "ON" : "OFF"));
+  }
+
+  function updateClock() {
+    const now = new Date();
+    document.getElementById("clockText").textContent = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+    const label = document.getElementById("homeTimeLabel");
+    if (label) label.textContent = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove("show"), 1600);
+  }
+
+  function callGameEvent(name) {
+    console.log("BAKIN_EVENT", name);
+    // Bakin 연동 예시:
+    // 1) localStorage / JSON 파일에 name 저장
+    // 2) Bakin C# 플러그인이 주기적으로 읽음
+    // 3) 이벤트명에 따라 변수 변경 또는 공통 이벤트 호출
+  }
+
+
+
+  document.addEventListener("input", e => {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+      playSfx("type");
+    }
+  }, true);
+
+
+  document.addEventListener("click", e => {
+    const target = e.target.closest("button, .download-btn, .buy-btn, .app-icon");
+    if (!target) return;
+    if (target.classList.contains("receipt-close")) {
+      playSfx("appClose");
+      return;
+    }
+    if (target.classList.contains("download-btn")) return;
+    if (target.classList.contains("ability-select-btn")) return;
+    if (target.classList.contains("ability-lock-btn")) return;
+    if (target.classList.contains("ability-refresh-btn")) return;
+    playSfx("button");
+  }, true);
+
+
+  init();
+  // VERSION: v5 visual polish + SVG app icons
+</script>
+</body>
+</html>
